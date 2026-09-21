@@ -1,0 +1,16 @@
+# =============================================================
+# Netlify — Doações BM
+# Aplicação: SPA estática (React + Vite)
+# Dados: Supabase (Auth + Postgres). Não usa mais backend Node/Express.
+# =============================================================
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"   # única function: qz-sign (impressão QZ Tray)
+
+# Qualquer rota da SPA cai no index.html (evita 404 em refresh/navegação)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

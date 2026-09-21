@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Ficha de Doação Nº {{ d.codigo_doacao }}</title>
+<style>
+  /* ===== PAPEL CONTÍNUO 21cm × 28cm (2 partes de 14cm) ===== */
+  @page {
+    size: 21cm 28cm;
+    margin: 0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 21cm;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10pt;
+    color: #000;
+    background: #fff;
+  }
+
+  /* Cada metade = 14cm */
+  .ficha-page {
+    width: 21cm;
+    height: 14cm;
+    padding: 0.5cm 0.7cm;
+    overflow: hidden;
+    page-break-inside: avoid;
+    position: relative;
+  }
+
+  .ficha-top    { border-bottom: 1px dashed #999; }
+
+  /* ===== LINHA DE INFO ===== */
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.12cm;
+    line-height: 1.3;
+    font-size: 9.5pt;
+  }
+  .info-row .lbl { font-weight: bold; }
+
+  .info-col-left  { flex: 1.4; padding-right: 0.4cm; }
+  .info-col-right { flex: 1; }
+
+  /* Bloco de campos lado-a-lado em duas colunas */
+  .fields-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    column-gap: 0.6cm;
+    row-gap: 0.05cm;
+    margin-bottom: 0.18cm;
+    font-size: 9.5pt;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .field-line {
+    display: flex;
+    align-items: flex-start;
+    border-bottom: 1px dotted #888;
+    padding: 1px 0;
+    min-width: 0;
+  }
+  .field-line .lbl {
+    font-weight: bold;
+    min-width: 1.8cm;
+    flex-shrink: 0;
+  }
+  .field-line .val {
+    flex: 1;
+    padding-left: 4px;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .field-line.full { grid-column: 1 / -1; }
+
+  /* ===== ASSINATURAS / RESPONSÁVEIS ===== */
+  .assinaturas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 0.8cm;
+    margin: 0.35cm 0 0.15cm;
+    font-size: 9.5pt;
+  }
+
+  .assinatura-bloco {
+    text-align: center;
+  }
+  .assinatura-linha {
+    border-bottom: 1px solid #000;
+    height: 0.6cm;
+    margin-bottom: 2px;
+  }
+  .assinatura-label {
+    font-size: 8pt;
+    color: #333;
+    font-weight: bold;
+  }
+
+  /* ===== TABELA DE ITENS ===== */
+  .tabela-titulo {
+    font-weight: bold;
+    background: #eee;
+    padding: 2px 4px;
+    margin-bottom: 2px;
+    border-bottom: 1px dotted #000;
+    text-transform: uppercase;
+    font-size: 9pt;
+    letter-spacing: 0.5px;
+  }
+
+  table.itens {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+  }
+
+  table.itens th, table.itens td {
+    padding: 2px 4px;
+    border-bottom: 1px dotted #999;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  table.itens th {
+    font-weight: bold;
+    background: #f5f5f5;
+    border-bottom: 1px dotted #000;
+    text-transform: uppercase;
+    font-size: 8.5pt;
+  }
+
+  table.itens td.num   { text-align: right; }
+  table.itens td.cent  { text-align: center; }
+
+  /* Larguras de coluna */
+  .col-qtde    { width: 1.6cm; }
+  .col-vol     { width: 2.0cm; }
+  .col-cod-item { width: 1.6cm; }
+  .col-desc    { width: auto;  }
+
+  /* ===== PARTE INFERIOR — RECIBO ===== */
+  .header-instituicao {
+    text-align: center;
+    margin-bottom: 0.25cm;
+    line-height: 1.35;
+    font-size: 8.5pt;
+  }
+
+  .header-logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4cm;
+    margin-bottom: 0.15cm;
+  }
+
+  .header-logo {
+    width: 1.6cm;
+    height: 1.6cm;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .header-logo-fallback {
+    width: 1.6cm;
+    height: 1.6cm;
+    border: 1.5px solid #333;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    font-size: 6pt;
+    text-align: center;
+    line-height: 1.1;
+    font-weight: bold;
+    color: #333;
+    flex-shrink: 0;
+  }
+
+  .header-titulo-instituicao {
+    font-weight: bold;
+    font-size: 11pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .header-endereco { font-size: 8.5pt; }
+
+  .recibo-titulo {
+    text-align: center;
+    font-weight: bold;
+    font-size: 12pt;
+    margin: 0.15cm 0 0.2cm;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-top: 1px dotted #000;
+    border-bottom: 1px dotted #000;
+    padding: 2px 0;
+  }
+
+  .recibo-info {
+    margin-bottom: 0.18cm;
+    font-size: 9.5pt;
+    line-height: 1.5;
+  }
+
+  .recibo-info .field-line { margin-bottom: 2px; }
+
+  .recibo-intro {
+    margin: 0.15cm 0 0.1cm;
+    font-size: 9.5pt;
+  }
+
+  /* ===== BOTÃO DE IMPRESSÃO (apenas tela) ===== */
+  .toolbar {
+    background: #4a3f8f;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #fff;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  .toolbar h1 { font-size: 1rem; font-weight: 600; }
+
+  .toolbar button, .toolbar a {
+    background: #fff;
+    color: #4a3f8f;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+    margin-left: 8px;
+  }
+
+  .toolbar button:hover, .toolbar a:hover { opacity: 0.9; }
+
+  /* ===== PÁGINAS DE CONTINUAÇÃO ===== */
+  .ficha-cont {
+    width: 21cm;
+    padding: 0.4cm 0.7cm;
+  }
+
+  .cont-titulo {
+    font-size: 9pt;
+    font-weight: bold;
+    margin-bottom: 0.2cm;
+    border-top: 1px dotted #000;
+    border-bottom: 1px dotted #000;
+    padding: 2px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .cont-subtitulo {
+    font-size: 8.5pt;
+    color: #555;
+    margin-bottom: 0.15cm;
+  }
+
+  /* Esconde toolbar na impressão */
+  @media print {
+    .toolbar { display: none; }
+    body, html { background: #fff; }
+    .ficha-top { border-bottom: none; }
+    .ficha-page-break { page-break-before: always; }
+  }
+
+  /* Visualização em tela */
+  @media screen {
+    body {
+      background: #e8e6f0;
+      padding: 20px 0;
+    }
+    .ficha-container {
+      width: 21cm;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+    }
+  }
+</style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>📄 Ficha de Doação Nº {{ "%06d"|format(d.codigo_doacao) }}</h1>
+  <div>
+    <a href="/doacoes">← Voltar</a>
+    <button onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+</div>
+
+<div class="ficha-container">
+
+  {# =================== PARTE SUPERIOR — FICHA DA DOAÇÃO =================== #}
+  <div class="ficha-page ficha-top">
+
+    <!-- Linha 1: Doador / Doação / Tipo / Data -->
+    <div class="info-row">
+      <div>
+        <span class="lbl">Doador:</span> {{ "%06d"|format(d.codigo_doador or 0) }}
+        &nbsp;-&nbsp;
+        <span class="lbl">Doação:</span> {{ "%06d"|format(d.codigo_doacao or 0) }}
+        &nbsp;-&nbsp;
+        <span class="lbl">Tipo de Doador:</span> {{ d.tipo_doador or "—" }}
+      </div>
+      <div>São Paulo, {{ d.data_doacao or "__/__/____" }}</div>
+    </div>
+
+    <!-- Linha 2: Retirar em / Remarcado -->
+    <div class="info-row">
+      <div><span class="lbl">Retirar em:</span> {{ d.data_retirada or "—" }}</div>
+      <div><span class="lbl">Remarcado:</span> {{ d.remarcado_para or "—" }}</div>
+    </div>
+
+    <!-- Bloco de campos -->
+    <div class="fields-grid">
+      <div class="field-line"><span class="lbl">Obs.:</span> <span class="val">{{ d.observacoes or "" }}</span></div>
+      <div class="field-line"><span class="lbl">Contato:</span> <span class="val">{{ d.contato or "" }}</span></div>
+
+      <div class="field-line"><span class="lbl">Nome:</span> <span class="val">{{ d.nome_doador or "" }}</span></div>
+      <div class="field-line"><span class="lbl">CEP:</span> <span class="val">{{ d.cep or "" }}</span></div>
+
+      <div class="field-line"><span class="lbl">Endereço:</span> <span class="val">{{ (d.logradouro or "") }} {{ d.endereco or "" }}</span></div>
+      <div class="field-line"><span class="lbl">Compl.:</span> <span class="val">{{ d.complemento or "" }}</span></div>
+
+      <div class="field-line"><span class="lbl">Bairro:</span> <span class="val">{{ d.bairro or "" }}</span></div>
+      <div class="field-line"><span class="lbl">Mapa:</span> <span class="val">{{ d.mapa or "" }}</span></div>
+
+      <div class="field-line"><span class="lbl">Fone:</span> <span class="val">{{ d.celular or d.fixo or "" }}</span></div>
+      <div class="field-line"><span class="lbl">Região:</span> <span class="val">{{ d.regiao or "" }}</span></div>
+
+      <div class="field-line full"><span class="lbl">Email:</span> <span class="val">{{ d.email or "" }}</span></div>
+    </div>
+
+    <!-- Veículo / Motorista / Encarregado -->
+    <div class="assinaturas">
+      <div class="assinatura-bloco">
+        <div class="assinatura-linha">{{ d.veiculo or "" }}</div>
+        <div class="assinatura-label">Veículo</div>
+      </div>
+      <div class="assinatura-bloco">
+        <div class="assinatura-linha">{{ d.motorista or "" }}</div>
+        <div class="assinatura-label">Motorista</div>
+      </div>
+      <div class="assinatura-bloco" style="grid-column: 1; margin-top: 0.05cm;">
+        <div class="assinatura-linha">{{ d.responsavel or "" }}</div>
+        <div class="assinatura-label">Enc. Doações</div>
+      </div>
+    </div>
+
+    <!-- Tabela de Itens -->
+    <div class="tabela-titulo">Dados da Doação</div>
+    <table class="itens">
+      <thead>
+        <tr>
+          <th class="col-qtde" style="text-align:right">QTDE</th>
+          <th class="col-vol">VOLUME</th>
+          <th class="col-cod-item" style="text-align:center">CÓD.ITEM</th>
+          <th class="col-desc">DESCRIÇÃO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in d.itens[:8] %}
+        <tr>
+          <td class="num">{{ ("%.0f"|format(it.quantidade)) if it.quantidade else "0" }}</td>
+          <td>{{ it.unidade or "—" }}</td>
+          <td class="cent">{{ it.categoria or "" }}</td>
+          <td>{{ it.item or "" }}</td>
+        </tr>
+        {% endfor %}
+        {# Preencher linhas vazias até 8 #}
+        {% for _ in range(8 - (d.itens|length if d.itens|length < 8 else 8)) %}
+        <tr><td>&nbsp;</td><td></td><td></td><td></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# =================== PARTE INFERIOR — RECIBO =================== #}
+  <div class="ficha-page ficha-bottom">
+
+    <!-- Cabeçalho da Instituição -->
+    <div class="header-instituicao">
+      <div class="header-logo-row">
+        <img src="/static/logo-instituicao01.png"
+             alt="Logo"
+             class="header-logo"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="header-logo-fallback" style="display:none">
+          <span style="font-size:14pt">⛪</span>
+          <span>LOGO</span>
+        </div>
+        <div>
+          <div class="header-titulo-instituicao">
+            Associação Espírita Beneficente Dr. Adolfo Bezerra de Menezes
+          </div>
+          <div class="header-endereco">
+            Rua Dona Vicentina Alegretti, 265 — Penha — São Paulo — SP<br>
+            CEP 03610-030 — Telefone (11) 2164-1800 — C.N.P.J. 60.478.245/0001-5<br>
+            E-mail: doacoes@abrigobezerrademenezes.org.br — Site: www.abrigobezerrademenezes.org.br
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="recibo-titulo">Recibo da Doação</div>
+
+    <!-- Dados do Doador no recibo -->
+    <div class="recibo-info">
+      <div class="field-line">
+        <span class="lbl">Recebemos do(a) Sr.(a):</span>
+        <span class="val">{{ d.nome_doador or "" }}</span>
+      </div>
+      <div class="field-line">
+        <span class="lbl">Endereço:</span>
+        <span class="val">{{ (d.logradouro or "") }} {{ d.endereco or "" }} {{ ("nº " ~ d.complemento) if d.complemento else "" }}</span>
+      </div>
+      <div class="field-line">
+        <span class="lbl">Bairro:</span>
+        <span class="val">{{ d.bairro or "" }} &nbsp;&nbsp; {{ d.cidade or "" }} / {{ d.estado or "" }} &nbsp;&nbsp; CEP: {{ d.cep or "" }}</span>
+      </div>
+    </div>
+
+    <div class="recibo-intro">as mercadorias abaixo discriminadas:</div>
+
+    <!-- Tabela de itens do recibo -->
+    <table class="itens">
+      <thead>
+        <tr>
+          <th class="col-qtde" style="text-align:right">QTDE</th>
+          <th class="col-vol">VOLUME</th>
+          <th class="col-cod-item" style="text-align:center">CÓD.ITEM</th>
+          <th class="col-desc">DESCRIÇÃO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in d.itens[:8] %}
+        <tr>
+          <td class="num">{{ ("%.0f"|format(it.quantidade)) if it.quantidade else "0" }}</td>
+          <td>{{ it.unidade or "—" }}</td>
+          <td class="cent">{{ it.categoria or "" }}</td>
+          <td>{{ it.item or "" }}</td>
+        </tr>
+        {% endfor %}
+        {% for _ in range(8 - (d.itens|length if d.itens|length < 8 else 8)) %}
+        <tr><td>&nbsp;</td><td></td><td></td><td></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+
+  {# =================== PÁGINAS DE CONTINUAÇÃO (quando > 8 itens) =================== #}
+  {% for chunk in d.itens[8:] | batch(12) %}
+  {% set pg = loop.index + 1 %}
+
+  {# --- Continuação Ficha --- #}
+  <div class="ficha-cont ficha-page-break">
+    <div class="cont-titulo">
+      Ficha da Doação Nº {{ "%06d"|format(d.codigo_doacao) }} — Continuação (Pág. {{ pg }})
+    </div>
+    <div class="cont-subtitulo">
+      Doador: {{ "%06d"|format(d.codigo_doador or 0) }} — {{ d.nome_doador or "" }} &nbsp;|&nbsp;
+      Retirada: {{ d.data_retirada or "—" }}
+    </div>
+    <table class="itens">
+      <thead>
+        <tr>
+          <th class="col-qtde" style="text-align:right">QTDE</th>
+          <th class="col-vol">VOLUME</th>
+          <th class="col-cod-item" style="text-align:center">CÓD.ITEM</th>
+          <th class="col-desc">DESCRIÇÃO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in chunk %}
+        <tr>
+          <td class="num">{{ ("%.0f"|format(it.quantidade)) if it.quantidade else "0" }}</td>
+          <td>{{ it.unidade or "—" }}</td>
+          <td class="cent">{{ it.categoria or "" }}</td>
+          <td>{{ it.item or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# --- Continuação Recibo --- #}
+  <div class="ficha-cont">
+    <div class="cont-titulo">
+      Recibo da Doação Nº {{ "%06d"|format(d.codigo_doacao) }} — Continuação (Pág. {{ pg }})
+    </div>
+    <div class="cont-subtitulo">
+      Recebemos de: {{ d.nome_doador or "" }} &nbsp;|&nbsp; Retirada: {{ d.data_retirada or "—" }}
+    </div>
+    <table class="itens">
+      <thead>
+        <tr>
+          <th class="col-qtde" style="text-align:right">QTDE</th>
+          <th class="col-vol">VOLUME</th>
+          <th class="col-cod-item" style="text-align:center">CÓD.ITEM</th>
+          <th class="col-desc">DESCRIÇÃO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in chunk %}
+        <tr>
+          <td class="num">{{ ("%.0f"|format(it.quantidade)) if it.quantidade else "0" }}</td>
+          <td>{{ it.unidade or "—" }}</td>
+          <td class="cent">{{ it.categoria or "" }}</td>
+          <td>{{ it.item or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% endfor %}
+
+</div>
+
+<script>
+  // Auto-impressão se vier com ?print=1
+  if (new URLSearchParams(window.location.search).get("print") === "1") {
+    setTimeout(() => window.print(), 400);
+  }
+</script>
+  <script src="{{ url_for('static', filename='theme.js') }}"></script>
+</body>
+</html>

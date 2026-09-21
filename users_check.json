@@ -1,0 +1,26 @@
+[
+  {
+    "id": "2433926f-55b1-46f7-9048-b4757058044b",
+    "user_id": "1cbedcec-9e82-43d2-8c7b-ab9c0cf46e43",
+    "email": "virgo.aranha66@gmail.com",
+    "role": "user",
+    "created_at": "2026-03-27T00:12:01.557745+00:00",
+    "departamento": "Doações"
+  },
+  {
+    "id": "74760184-e8f9-4ff9-b43a-b274a6efd6ee",
+    "user_id": "d1ded186-1ea0-4637-96b7-c12d46707fa5",
+    "email": "virgo.aranha@gmail.com",
+    "role": "admin",
+    "created_at": "2026-03-25T19:17:18.317173+00:00",
+    "departamento": "Suporte"
+  },
+  {
+    "id": "5a1e3fa0-6a1b-4797-8d9c-bb7d35f2c229",
+    "user_id": "94ca87ad-6827-4852-a238-8c078ca2d41a",
+    "email": "virgoalvesaranha@gmail.com",
+    "role": "user",
+    "created_at": "2026-03-27T22:06:22.546976+00:00",
+    "departamento": "Transportes"
+  }
+]
