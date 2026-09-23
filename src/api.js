@@ -153,15 +153,60 @@ export const api = {
           logradouro: data.logradouro || '',
           endereco: data.endereco || '',
           cep: data.cep || '',
-          complemento: data.complemento || '',
           bairro: data.bairro || '',
           cidade: data.cidade || '',
-          estado: data.estado || ''
+          estado: data.estado || '',
+          mapa: data.mapa || ''
         })
         .select('id')
         .maybeSingle();
       if (error) throw error;
       return { id: row?.id };
+    },
+    getMapaByEndereco: async (logradouro, endereco, cep) => {
+      // Busca mapa existente para o endereço (prioridade: logradouro+endereco+cep, depois só logradouro+endereco)
+      const cleanCep = (cep || '').replace(/\D/g, '');
+      const logTrim = (logradouro || '').trim();
+      const endTrim = (endereco || '').trim();
+      if (!endTrim) return null;
+      // Tenta com cep se houver
+      if (cleanCep) {
+        const { data } = await supabase.from('enderecos_coleta').select('mapa').ilike('logradouro', logTrim || '%').ilike('endereco', endTrim).eq('cep', cleanCep).limit(1).maybeSingle();
+        if (data?.mapa) return data.mapa;
+      }
+      // Fallback sem cep
+      const { data } = await supabase.from('enderecos_coleta').select('mapa').ilike('logradouro', logTrim || '%').ilike('endereco', endTrim).not('mapa', 'is', null).neq('mapa', '').limit(1).maybeSingle();
+      return data?.mapa || null;
+    },
+    syncMapa: async (enderecoData) => {
+      // Garante que enderecos_coleta contenha o endereço com mapa atualizado
+      const cep = (enderecoData.cep || '').replace(/\D/g, '');
+      const logradouro = (enderecoData.logradouro || '').trim();
+      const endereco = (enderecoData.endereco || '').trim();
+      if (!endereco) return null;
+      const { data: existing } = await supabase.from('enderecos_coleta').select('id, mapa').ilike('logradouro', logradouro || '%').ilike('endereco', endereco).eq('cep', cep).limit(1).maybeSingle();
+      // Se existe mas cep vazio e o novo tem cep, tenta buscar sem cep
+      let target = existing;
+      if (!target && cep) {
+        const { data: alt } = await supabase.from('enderecos_coleta').select('id, mapa').ilike('logradouro', logradouro || '%').ilike('endereco', endereco).limit(1).maybeSingle();
+        target = alt;
+      }
+      if (target) {
+        // Atualiza se mapa novo for fornecido ou campos vazios
+        const updates = {};
+        if (enderecoData.mapa && enderecoData.mapa !== target.mapa) updates.mapa = enderecoData.mapa;
+        if (enderecoData.bairro) updates.bairro = enderecoData.bairro;
+        if (enderecoData.cidade) updates.cidade = enderecoData.cidade;
+        if (enderecoData.estado) updates.estado = enderecoData.estado;
+        if (cep) updates.cep = cep;
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('enderecos_coleta').update(updates).eq('id', target.id);
+        }
+        return { id: target.id, updated: Object.keys(updates).length > 0 };
+      } else {
+        // Cria novo
+        return await api.enderecos.create(enderecoData);
+      }
     },
   },
 

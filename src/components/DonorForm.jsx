@@ -213,7 +213,8 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
                         bairro: finalAddr.bairro || prev.bairro,
                         cidade: finalAddr.cidade || prev.cidade,
                         estado: finalAddr.estado || prev.estado,
-                        complemento: finalAddr.complemento || prev.complemento
+                        complemento: finalAddr.complemento || prev.complemento,
+                        mapa: finalAddr.mapa || prev.mapa
                     }));
                     return;
                 }
@@ -227,13 +228,20 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
                     const detectedTipo = parts[0] || '';
                     const detectedEndereco = parts.slice(1).join(' ') || fullLogradouro;
 
+                    // Tenta buscar mapa existente para esse endereço (ViaCEP + enderecos_coleta)
+                    let mapaEncontrado = '';
+                    try {
+                        mapaEncontrado = await api.enderecos.getMapaByEndereco(detectedTipo, detectedEndereco, cleanCep) || '';
+                    } catch {}
+
                     setFormData(prev => ({
                         ...prev,
                         logradouro: detectedTipo,
                         endereco: detectedEndereco,
                         bairro: data.bairro || '',
                         cidade: data.localidade || '',
-                        estado: data.uf || ''
+                        estado: data.uf || '',
+                        mapa: mapaEncontrado || prev.mapa
                     }));
                 }
             } catch (e) { console.error(e); }
@@ -274,7 +282,8 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
             cep: addr.cep ? maskCep(addr.cep) : prev.cep,
             bairro: addr.bairro || prev.bairro,
             cidade: addr.cidade || prev.cidade,
-            estado: addr.estado || prev.estado
+            estado: addr.estado || prev.estado,
+            mapa: addr.mapa || prev.mapa
         }));
         setShowAddressDropdown(false);
         setAddressSuggestions([]);
@@ -307,9 +316,13 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
                     complemento: (formData.complemento || '').trim(),
                     bairro: (formData.bairro || '').trim(),
                     cidade: (formData.cidade || '').trim(),
-                    estado: (formData.estado || '').trim()
+                    estado: (formData.estado || '').trim(),
+                    mapa: (formData.mapa || '').trim()
                 };
                 await api.enderecos.create(newAddr);
+            } else if ((formData.mapa || '').trim()) {
+                // Se já existe mas o mapa foi preenchido/alterado, atualiza
+                try { await api.enderecos.syncMapa({ logradouro: logTrim, endereco: endTrim, cep: (formData.cep || '').replace(/\D/g, ''), bairro: formData.bairro, cidade: formData.cidade, estado: formData.estado, mapa: formData.mapa }); } catch {}
             }
         }, 200);
     };
@@ -361,6 +374,24 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
                 savedCode = formData.codigo;
             }
 
+            // Sincroniza enderecos_coleta com dados atuais (incluindo Mapa)
+            try {
+                const enderecoSync = {
+                    logradouro: formData.logradouro || '',
+                    endereco: formData.endereco || '',
+                    cep: formData.cep || '',
+                    bairro: formData.bairro || '',
+                    cidade: formData.cidade || '',
+                    estado: formData.estado || '',
+                    mapa: formData.mapa || ''
+                };
+                if (enderecoSync.endereco.trim() || enderecoSync.cep.replace(/\D/g, '')) {
+                    await api.enderecos.syncMapa(enderecoSync);
+                }
+            } catch (err) {
+                console.error('Aviso: falha ao sincronizar enderecos_coleta:', err);
+            }
+
             localStorage.removeItem('donor_draft');
             try {
                 await registerLog({
@@ -381,7 +412,7 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
                 await fetchDonor(currentIndex, null, true);
             }
             showToast('Dados salvos com sucesso!');
-        } catch { showToast('Erro ao salvar.', 'error'); } finally { setLoading(false); }
+        } catch (e) { console.error('Erro ao salvar doador:', e); showToast('Erro ao salvar: ' + (e?.message || ''), 'error'); } finally { setLoading(false); }
     };
 
     const handleSearch = () => {
