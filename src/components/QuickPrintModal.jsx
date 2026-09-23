@@ -36,11 +36,15 @@ const QuickPrintModal = ({ onClose, userLoggerName, initialDonorCode = '', initi
             let query = supabase.from('doacoes').select('*, doadores(*)');
 
             if (donationCode) {
-                const paddedDon = donationCode.padStart(6, '0');
-                query = query.eq('codigo_doacao', paddedDon);
+                const raw = String(donationCode).replace(/\D/g, '');
+                const numeric = parseInt(raw, 10);
+                if (isNaN(numeric)) throw new Error('Código da doação inválido');
+                query = query.eq('codigo_doacao', numeric);
             } else if (donorCode) {
-                const paddedDonor = donorCode.padStart(6, '0');
-                query = query.eq('codigo_doador', paddedDonor).order('created_at', { ascending: false }).limit(1);
+                const raw = String(donorCode).replace(/\D/g, '');
+                const numeric = parseInt(raw, 10);
+                if (isNaN(numeric)) throw new Error('Código do doador inválido');
+                query = query.eq('codigo_doador', numeric).order('created_at', { ascending: false }).limit(1);
             }
 
             const { data, error } = await query.maybeSingle();

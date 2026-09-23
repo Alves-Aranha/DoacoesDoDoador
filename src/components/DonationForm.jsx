@@ -148,7 +148,9 @@ const AddItemModal = ({ onAdd, onClose, categories }) => {
                 setAvailableItems([]);
                 return;
             }
-            const { data } = await supabase.from('itens').select('codigo_completo, nome, unidade').eq('codigo_base', selectedCategory).order('nome');
+            const baseStr = String(selectedCategory).trim();
+            const { data, error } = await supabase.from('itens').select('codigo_completo, nome, unidade').eq('codigo_base', baseStr).order('nome');
+            if (error) console.error('Erro ao carregar itens da categoria', baseStr, error);
             setAvailableItems(data || []);
         };
         load();
@@ -323,13 +325,15 @@ const DonationForm = ({ initialDonor }) => {
 
     const fetchAuxData = useCallback(async () => {
         try {
-            const { data: cData } = await supabase.from('categoria').select('codigo_base, nome').order('nome');
+            const { data: cData, error: catError } = await supabase.from('categoria').select('codigo_base, nome').order('nome');
+            if (catError) console.error('Erro ao carregar categorias:', catError);
             
             // Busca responsáveis únicos já cadastrados nas doações
             // Limitado + ordenado para evitar transferir a tabela inteira
             const { data: respData } = await supabase.from('doacoes').select('responsavel').order('codigo_doacao', { ascending: false }).limit(2000);
             
             setCategories(cData || []);
+            if (!cData || cData.length === 0) console.warn('Categorias vazias - verifique RLS/autenticação', catError);
             
             const baseNames = ["Adelaide", "Auro", "Elisângela", "Helenice", "José Luiz", "Tatyane", "Shirley"];
             
