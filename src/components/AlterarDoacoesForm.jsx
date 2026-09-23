@@ -85,7 +85,7 @@ const AddItemModal = ({ onAdd, onClose, categories }) => {
     const handleAdd = () => {
         const itemNome = selectedItem === 'Outro' ? customItem : selectedItem;
         if (itemNome && quantity > 0) {
-            const catObj = categories.find(c => c.codigo_base === selectedCategory);
+            const catObj = categories.find(c => String(c.codigo_base) === String(selectedCategory));
             const foundItem = availableItems.find(x => x.nome === itemNome);
             onAdd({ item: itemNome, qtde: quantity, categoria: catObj?.nome || 'Geral', unidade: unit, codigo_item: foundItem?.codigo_completo || '' });
             onClose();
@@ -314,14 +314,26 @@ const AlterarDoacoesForm = ({ initialDonor, onBack }) => {
         }
         setLoading(true);
         try {
-            const rawCode = String(formData.codigo_doador).trim();
-            const paddedCode = rawCode.padStart(6, '0');
+            const rawDigits = String(formData.codigo_doador).trim().replace(/\D/g, '');
+            const numericCode = parseInt(rawDigits, 10);
+            if (!rawDigits || isNaN(numericCode)) {
+                showToast('Código do doador inválido. Selecione um doador.', 'error');
+                setLoading(false);
+                return;
+            }
 
-            const { data: donorLookup } = await supabase
+            const { data: donorLookup, error: lookupError } = await supabase
                 .from('doadores')
                 .select('codigo_doador')
-                .or(`codigo_doador.eq.${rawCode},codigo_doador.eq.${paddedCode}`)
+                .eq('codigo_doador', numericCode)
                 .maybeSingle();
+
+            if (lookupError) {
+                console.error('Erro ao buscar doador:', lookupError);
+                showToast('Erro ao buscar doador: ' + lookupError.message, 'error');
+                setLoading(false);
+                return;
+            }
 
             let donorCode = donorLookup?.codigo_doador;
 
@@ -330,7 +342,7 @@ const AlterarDoacoesForm = ({ initialDonor, onBack }) => {
                 const { data: newDonor, error: donorError } = await supabase
                     .from('doadores')
                     .upsert({
-                        codigo_doador: paddedCode,
+                        codigo_doador: numericCode,
                         nome: donorData.nome || formData.doador_nome || '',
                         celular: donorData.celular || '',
                         fixo: donorData.fixo || '',
@@ -350,7 +362,8 @@ const AlterarDoacoesForm = ({ initialDonor, onBack }) => {
                     .select('codigo_doador')
                     .maybeSingle();
                 if (donorError || !newDonor) {
-                    showToast('Erro ao sincronizar doador. Tente novamente.', 'error');
+                    console.error('Erro ao sincronizar doador:', donorError);
+                    showToast('Erro ao sincronizar doador: ' + (donorError?.message || 'Tente novamente.'), 'error');
                     setLoading(false);
                     return;
                 }
