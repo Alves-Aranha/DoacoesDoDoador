@@ -11,32 +11,40 @@ const ComunicacaoInternaTransportesModal = ({ donation, onClose }) => {
     const [donorCode, setDonorCode] = useState('');
     const [donationCode, setDonationCode] = useState('');
     const [loading, setLoading] = useState(false);
-    const [foundData, setFoundData] = useState(donation || null);
+    // Inicializa foundData já enriquecido para evitar relatório vazio quando vem do Status Individual
+    const [foundData, setFoundData] = useState(() => donation ? { ...donation, _fromStatusIndividual: true } : null);
     const [formaEnvio, setFormaEnvio] = useState('Email');
+
+    const todayStr = useMemo(() => new Date().toLocaleDateString('pt-BR'), []);
+    const responsavelLogado = perfil?.nome || user?.email?.split('@')[0] || 'Sistema';
+    // Responsável digitado no Status Individual tem prioridade (deve ser preservado mesmo após fetch)
+    const initialDonationResponsavel = (donation?.responsavel || '').trim();
 
     // Inicializa campos de busca se receber uma doação
     useEffect(() => {
         if (donation) {
             setDonationCode(donation.codigo || donation.codigo_doacao || '');
+            // Garante que foundData reflita a doação atual do Status Individual (evita ficar vazio)
+            setFoundData({ ...donation, _fromStatusIndividual: true });
         }
     }, [donation]);
 
-    const todayStr = useMemo(() => new Date().toLocaleDateString('pt-BR'), []);
-    const responsavelLogado = perfil?.nome || user?.email?.split('@')[0] || 'Sistema';
-
-    // Busca automática quando os códigos mudam
+    // Busca automática quando os códigos mudam - desabilitada quando veio do Status Individual para não apagar dados
     useEffect(() => {
+        // Se veio do Status Individual, não faz busca automática que apagaria o relatório
+        if (donation) return;
         const delayDebounceFn = setTimeout(() => {
             if (donorCode || donationCode) {
                 handleSearch();
             }
         }, 600);
         return () => clearTimeout(delayDebounceFn);
-    }, [donorCode, donationCode]);
+    }, [donorCode, donationCode, donation]);
 
     const handleSearch = async () => {
         if (!donorCode && !donationCode) {
-            setFoundData(null);
+            // Não apaga dados vindos do Status Individual
+            if (!donation) setFoundData(null);
             return;
         }
 
@@ -58,12 +66,20 @@ const ComunicacaoInternaTransportesModal = ({ donation, onClose }) => {
             if (data) {
                 const { data: itemData } = await supabase.from('itens_doacao').select('*').eq('id_doacao', data.codigo_doacao);
                 data.itens_doacao = itemData || [];
+                // Preserva Responsável digitado no Status Individual (prioridade)
+                if (initialDonationResponsavel && initialDonationResponsavel !== '' && data.responsavel !== initialDonationResponsavel) {
+                    data.responsavel = initialDonationResponsavel;
+                }
+                // Preserva campos flat que possam estar faltando no fetch se a busca for manual
                 setFoundData(data);
             } else {
-                setFoundData(null);
+                // Se veio do Status Individual, mantém os dados originais em vez de limpar (evita relatório vazio)
+                if (!donation) setFoundData(null);
             }
         } catch (err) {
             console.error('Erro na busca de comunicação interna transportes:', err);
+            // Em erro, não apaga dados do Status Individual
+            if (!donation) setFoundData(null);
         } finally {
             setLoading(false);
         }
@@ -73,8 +89,52 @@ const ComunicacaoInternaTransportesModal = ({ donation, onClose }) => {
         window.print();
     };
 
-    const donor = foundData?.doadores || {};
-    const items = foundData?.itens_doacao || [];
+    // FIX: Suporte robusto a doação vinda do Status Individual (flat: codigo/codigo_doador/doador_nome) e preservar Responsável digitado
+    const donor = (() => {
+        let d = foundData?.doadores || {};
+        if (Array.isArray(d)) d = d[0] || {};
+        const isEmpty = !d || (typeof d === 'object' && Object.keys(d).length === 0);
+        // Base sempre inclui fallback flat para caso doadores esteja incompleto (ex: select limitado)
+        const base = {
+            codigo_doador: foundData?.codigo_doador || foundData?.codigoDoador || d.codigo_doador || '',
+            nome: foundData?.doador_nome || foundData?.nomeDoador || d.nome || '',
+            logradouro: foundData?.doador_logradouro || d.logradouro || '',
+            endereco: foundData?.doador_endereco || d.endereco || '',
+            numero: foundData?.doador_numero || d.numero || '',
+            bairro: foundData?.doador_bairro || d.bairro || '',
+            complemento: foundData?.doador_complemento || d.complemento || '',
+            cidade: foundData?.doador_cidade || d.cidade || '',
+            estado: foundData?.doador_estado || d.estado || '',
+        };
+        if (isEmpty) return base;
+        // Merge: doadores do banco tem prioridade, mas completa com fallback flat quando falta código/nome
+        return {
+            ...base,
+            ...d,
+            codigo_doador: d.codigo_doador || base.codigo_doador,
+            nome: d.nome || base.nome,
+        };
+    })();
+    const items = foundData?.itens_doacao || foundData?.itens || [];
+
+    // Códigos robustos (evita "undefined")
+    const displayDonorCode = (() => {
+        const v = donor?.codigo_doador ?? foundData?.codigo_doador ?? foundData?.codigoDoador ?? '';
+        if (!v && v !== 0) return '---';
+        const s = String(v).trim();
+        if (!s || s === 'undefined') return '---';
+        return s.padStart(6, '0');
+    })();
+    const displayDonationCode = (() => {
+        const v = foundData?.codigo_doacao ?? foundData?.codigo ?? '';
+        if (!v && v !== 0) return '---';
+        const s = String(v).trim();
+        if (!s || s === 'undefined') return '---';
+        return s.padStart(6, '0');
+    })();
+    const displayDonorName = donor?.nome || foundData?.doador_nome || foundData?.nomeDoador || '---';
+    // Responsável deve vir do campo digitado no Status Individual (preserva valor digitado mesmo antes de gravar)
+    const displayResponsavel = (initialDonationResponsavel || foundData?.responsavel || responsavelLogado || '').split('@')[0].replace(/[()]/g, '').trim();
 
     return (
         <div className="modal-overlay" style={{ zIndex: 3000 }}>
@@ -233,7 +293,7 @@ const ComunicacaoInternaTransportesModal = ({ donation, onClose }) => {
                     {foundData && (
                         <div className="ci-result no-print">
                             <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>
-                                {foundData.doadores?.codigo_doador} - {foundData.doadores?.nome}
+                                {displayDonorCode} - {displayDonorName}
                             </div>
                             <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>
                                 Doador encontrado para a doação selecionada
@@ -294,12 +354,12 @@ const ComunicacaoInternaTransportesModal = ({ donation, onClose }) => {
                         <div className="ci-assunto">ASSUNTO: Cancelamento e remarcações de Doações</div>
 
                         <div className="ci-form-line" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                            <div><strong>Código Doador:</strong> {String(donor.codigo_doador).padStart(6, '0')}</div>
-                            <div><strong>Código Doação:</strong> {String(foundData?.codigo_doacao || '').padStart(6, '0')}</div>
+                            <div><strong>Código Doador:</strong> {displayDonorCode}</div>
+                            <div><strong>Código Doação:</strong> {displayDonationCode}</div>
                         </div>
 
                         <div className="ci-form-line">
-                            Nome do Doador: {donor.nome || '---'}
+                            Nome do Doador: {displayDonorName}
                         </div>
 
                         <div className="ci-form-line">
@@ -334,7 +394,7 @@ const ComunicacaoInternaTransportesModal = ({ donation, onClose }) => {
                         </div>
 
                         <div className="ci-form-line" style={{ marginTop: '30px' }}>
-                            <strong>Responsável:</strong> {(foundData?.responsavel || responsavelLogado || '').split('@')[0].replace(/[()]/g, '').trim()}
+                            <strong>Responsável:</strong> {displayResponsavel || '---'}
                         </div>
 
                         {/* Rodapé de assinatura removido conforme solicitação */}

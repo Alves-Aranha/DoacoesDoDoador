@@ -138,6 +138,12 @@ export function AuthProvider({ children }) {
     const AGRADECIMENTO_EMAILS = ['eli.almeida7306@gmail.com', 'shirlinhaesantos@gmail.com'];
     const canAccessAgradecimento = isAdmin || AGRADECIMENTO_EMAILS.includes(user?.email) || (!isDoacoes && (isSuporte || isDiretoria));
 
+    // --- Controle de acesso: Alterar Doações (acesso total apenas para administradores específicos) ---
+    const ALTERAR_DOACOES_ADMINS = ['virgo.aranha@gmail', 'virgo.aranha@gmail.com', 'virgo.aranha66@gmail.com', 'eli.almeida7306@gmail.com'];
+    const normalizedEmail = (user?.email || '').toLowerCase().trim();
+    const canEditAlterarDoacoes = ALTERAR_DOACOES_ADMINS.map(e => e.toLowerCase().trim()).includes(normalizedEmail);
+    const canViewAlterarDoacoes = true; // todos autenticados podem consultar
+
     return (
         <AuthContext.Provider value={{ 
             user, 
@@ -152,7 +158,9 @@ export function AuthProvider({ children }) {
             isDoacoes,
             isTransportes,
             isDiretoria,
-            canAccessAgradecimento
+            canAccessAgradecimento,
+            canEditAlterarDoacoes,
+            canViewAlterarDoacoes
         }}>
             {children}
         </AuthContext.Provider>

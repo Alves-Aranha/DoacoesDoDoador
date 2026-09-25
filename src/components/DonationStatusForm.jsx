@@ -45,7 +45,7 @@ const DonationStatusForm = () => {
     const fetchDonations = useCallback(async (donorCode = '', donationCode = '') => {
         setSearching(true);
         try {
-            let sQuery = supabase.from('doacoes').select('*, doadores!inner(nome, logradouro, endereco, complemento, bairro)').order('codigo_doacao', { ascending: false });
+            let sQuery = supabase.from('doacoes').select('*, doadores(*)').order('codigo_doacao', { ascending: false });
             if (donationCode) {
                 const paddedDon = donationCode.trim().padStart(6, '0');
                 sQuery = sQuery.eq('codigo_doacao', paddedDon);
@@ -69,11 +69,13 @@ const DonationStatusForm = () => {
                 data.forEach(d => { d.itens_doacao = itensByCode[d.codigo_doacao] || []; });
             }
             const mapped = data.filter(d => d.doadores).map(d => ({
-                codigo: d.codigo_doacao, codigo_doador: d.codigo_doador, doador_nome: d.doadores.nome, 
+                codigo: d.codigo_doacao, codigo_doacao: d.codigo_doacao, codigo_doador: d.codigo_doador, doador_nome: d.doadores.nome, 
                 doador_endereco: `${d.doadores.logradouro || ''} ${d.doadores.endereco || ''}`.trim(),
                 doador_complemento: d.doadores.complemento || '',
                 doador_bairro: d.doadores.bairro || '',
+                doadores: d.doadores,
                 data_doacao: d.data_doacao,
+                created_at: d.created_at,
                 data_retirada: d.data_retirada, data_baixa: d.data_baixa, data_cancelamento: d.data_cancelamento,
                 remarcado_para: d.remarcado_para, status: d.status, observacoes: d.observacoes || '', itens: d.itens_doacao || [],
                 responsavel: d.responsavel || ''

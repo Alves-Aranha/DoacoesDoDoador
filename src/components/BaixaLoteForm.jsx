@@ -59,16 +59,24 @@ const BaixaLoteForm = () => {
         setToast(null);
         setSelectedIds(new Set());
         try {
+            // FIX 2: Listar Pendentes e Remarcadas - corrige query que não filtrava status Remarcada e usa effective date
             const { data, error } = await supabase
                 .from('doacoes')
                 .select('codigo_doacao, codigo_doador, data_retirada, status, remarcado_para, doadores(nome)')
-                .or(`and(status.eq.Pendente,data_retirada.gte.${startDate},data_retirada.lte.${endDate}),and(remarcado_para.gte.${startDate},remarcado_para.lte.${endDate})`)
+                .in('status', ['Pendente', 'Remarcada'])
                 .order('codigo_doador', { ascending: true });
 
             if (error) throw error;
             
+            // Filtra em frontend pela data efetiva (Pendentes: data_retirada / Remarcadas: remarcado_para) dentro do período
+            const filteredByDate = (data || []).filter(d => {
+                const effDate = (d.status === 'Remarcada' && d.remarcado_para) ? d.remarcado_para.split('T')[0].split(' ')[0] : (d.data_retirada ? d.data_retirada.split('T')[0].split(' ')[0] : null);
+                if (!effDate) return false;
+                return effDate >= startDate && effDate <= endDate;
+            });
+
             // Ordenação numérica por código doador no frontend para garantir precisão
-            const sortedData = (data || []).sort((a, b) => {
+            const sortedData = filteredByDate.sort((a, b) => {
                 const codeA = parseInt(a.codigo_doador) || 0;
                 const codeB = parseInt(b.codigo_doador) || 0;
                 return codeA - codeB;
@@ -76,7 +84,7 @@ const BaixaLoteForm = () => {
 
             setDonations(sortedData);
             
-            if (data?.length === 0) {
+            if (sortedData.length === 0) {
                 showToast('Nenhuma doação Pendente ou Remarcada encontrada neste período.', 'error');
             }
         } catch (err) {

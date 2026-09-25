@@ -80,7 +80,16 @@ const RelFichaDoacoes = ({ donation, userLoggerName, onClose }) => {
     const email       = up(dInfo.email || '');
     const cidade      = up(dInfo.cidade || 'SAO PAULO');
     const estado      = up(dInfo.estado || 'SP');
-    const todayStr    = new Date().toLocaleDateString('pt-BR');
+    // FIX 1: Data de São Paulo deve ser a data de cadastramento (data_doacao) e não a data de impressão
+    const formatDateSafe = (d) => {
+        if (!d) return '';
+        const part = d.split(/T| /)[0];
+        const p = part.split('-');
+        if (p.length !== 3) return d;
+        return `${p[2]}/${p[1]}/${p[0]}`;
+    };
+    const registrationDateStr = formatDateSafe(donation.data_doacao || donation.data_solicitacao || donation.created_at || '') || new Date().toLocaleDateString('pt-BR');
+    const todayStr    = registrationDateStr;
 
     const wrapField = (text, maxWidth = 50) => {
         const s = (text || '').toString().trim();

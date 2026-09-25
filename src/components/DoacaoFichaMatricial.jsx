@@ -79,7 +79,8 @@ const DoacaoFichaMatricial = ({ donation, userLoggerName, onClose }) => {
     const email       = up(dInfo.email || '');
     const cidade      = up(dInfo.cidade || 'SAO PAULO');
     const estado      = up(dInfo.estado || 'SP');
-    const todayStr = new Date().toLocaleDateString('pt-BR');
+    // FIX 1: Data de São Paulo deve ser a data de cadastramento (data_doacao) e não a data de impressão
+    const todayStr = formatDate(donation.data_doacao || donation.data_solicitacao || donation.created_at || '') || new Date().toLocaleDateString('pt-BR');
 
     const wrapField = (text, maxWidth = 45) => {
         const s = (text || '').toString().trim();

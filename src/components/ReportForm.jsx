@@ -32,19 +32,29 @@ const ReportForm = () => {
             } else {
                 query = query.eq('status', filter);
             }
-            query = query.order('data_doacao', { ascending: false });
+            // FIX 3: Ordenar por Código do Doador crescente (quando filtrado por status)
+            query = query.order('codigo_doador', { ascending: true });
 
             const { data, error } = await query;
             if (error) throw error;
 
             const safeData = data || [];
-            const finalData = filter === 'Todas'
+            let finalData = filter === 'Todas'
                 ? safeData.filter(d => {
                     if (!d.status) return true;
                     const s = d.status.toString().toLowerCase().trim();
                     return s !== 'baixada' && s !== 'cancelada';
                 })
                 : safeData;
+
+            // Garantia de ordenação numérica por Código do Doador crescente no frontend
+            finalData = [...finalData].sort((a, b) => {
+                const ca = parseInt(a.codigo_doador) || 0;
+                const cb = parseInt(b.codigo_doador) || 0;
+                if (ca !== cb) return ca - cb;
+                // desempate por código da doação
+                return String(a.codigo_doacao).localeCompare(String(b.codigo_doacao));
+            });
 
             setDonations(finalData);
             setTotals({

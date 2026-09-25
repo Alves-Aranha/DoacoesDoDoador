@@ -171,8 +171,10 @@ const AddItemModal = ({ onAdd, onClose, categories }) => {
 };
 
 const AlterarDoacoesForm = ({ initialDonor, onBack }) => {
-    const { user, perfil, isTransportes, isAdmin, isDoacoes } = useAuth();
-    const canEdit = isAdmin || isDoacoes || isTransportes; // Transportes deve poder editar as doações
+    const { user, perfil, canEditAlterarDoacoes } = useAuth();
+    // Regra: apenas 3 e-mails têm acesso total; demais (Doações) somente Consulta
+    const canEdit = canEditAlterarDoacoes === true;
+    const readOnlyMode = !canEdit;
     const [formData, setFormData] = useState({
         codigo_doacao: '', 
         codigo_doador: initialDonor?.codigo || initialDonor?.codigo_doador || '', 
@@ -305,6 +307,10 @@ const AlterarDoacoesForm = ({ initialDonor, onBack }) => {
 
     const handleSave = async (e) => {
         if (e) e.preventDefault();
+        if (!canEdit) {
+            showToast('Seu usuário tem acesso apenas de Consulta neste formulário.', 'error');
+            return;
+        }
         if (loading) return; // Evita duplo clique (proteção contra Duplicate Key)
         if (!formData.responsavel?.trim()) {
             showToast('O campo RESPONSÁVEL é obrigatório.', 'error');
@@ -507,13 +513,18 @@ const AlterarDoacoesForm = ({ initialDonor, onBack }) => {
                     </div>
                     <div className="nav-actions" style={{ flex: '1 1 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '10px' }}>
                         {!isEditing && (
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                {canEdit && (
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                {readOnlyMode && totalRecords > 0 && (
+                                    <span style={{ padding: '6px 12px', borderRadius: '8px', background: '#fef3c7', color: '#92400e', fontSize: '0.75rem', fontWeight: 800, border: '1px solid #fbbf24' }} title="Seu usuário tem acesso apenas de consulta neste formulário">🔒 MODO CONSULTA</span>
+                                )}
+                                {canEdit ? (
                                     <>
                                         <button className="btn-action btn-secondary" style={{ flexShrink: 0 }} onClick={onBack}><X size={18} /> Cancelar</button>
                                         <button className="btn-action btn-primary" style={{ flexShrink: 0 }} onClick={() => setIsEditing(true)} disabled={totalRecords === 0}><Edit2 size={18} /> Alterar</button>
                                         <button className="btn-action btn-danger" style={{ flexShrink: 0 }} onClick={() => setShowConfirmDelete(true)} disabled={totalRecords === 0}><Trash2 size={18} /> Excluir</button>
                                     </>
+                                ) : (
+                                    <button className="btn-action btn-secondary" style={{ flexShrink: 0 }} onClick={onBack}><X size={18} /> Voltar</button>
                                 )}
 
                                 <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
@@ -529,6 +540,12 @@ const AlterarDoacoesForm = ({ initialDonor, onBack }) => {
                         )}
                     </div>
                 </div>
+
+                {readOnlyMode && (
+                    <div style={{ margin: '0 0 16px 0', padding: '12px 16px', background: '#fffbeb', border: '1px solid #fbbf24', borderRadius: '10px', color: '#92400e', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Info size={18} /> Acesso de <strong>Consulta</strong>: seu usuário ({user?.email}) não tem permissão para alterar ou excluir doações neste formulário. Somente os administradores (virgo.aranha@gmail.com, virgo.aranha66@gmail.com, eli.almeida7306@gmail.com) têm acesso total.
+                    </div>
+                )}
 
                 <div className="premium-wrapper" style={{ display: 'block' }}>
                     <div className="glass-card" style={{ padding: '30px', marginBottom: '30px' }}>
