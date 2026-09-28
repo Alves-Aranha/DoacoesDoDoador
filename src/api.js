@@ -260,6 +260,20 @@ export const api = {
         .eq('email', data.user.email)
         .maybeSingle();
 
+      // Bloqueia login se e-mail não estiver autorizado (exceto o admin master)
+      if (!profile && data.user.email !== 'virgo.aranha@gmail.com') {
+        await supabase.auth.signOut();
+        throw new Error('Acesso não autorizado. Solicite ao administrador que autorize este e-mail.');
+      }
+
+      // Vincula user_id ao perfil se ainda não estiver vinculado
+      if (profile && !profile.user_id) {
+        await supabase
+          .from('perfis_usuarios')
+          .update({ user_id: data.user.id, status: 'Ativo' })
+          .eq('id', profile.id);
+      }
+
       return {
         user: {
           id: data.user.id,

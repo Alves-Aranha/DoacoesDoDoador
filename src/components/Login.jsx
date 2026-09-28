@@ -37,8 +37,9 @@ const Login = () => {
                         modulo: 'Autenticação',
                         detalhes: 'Novo usuário criou conta no sistema'
                     });
-                    alert('Cadastro realizado! Por favor, verifique seu e-mail para confirmar a conta (se aplicável) ou tente fazer o login.');
+                    alert('Conta criada com sucesso! Agora faça o login com seu e-mail e senha.');
                     setIsLogin(true);
+                    setPassword('');
                 }
             } catch (err) {
                 // Se for erro de rede (Failed to fetch), tenta novamente
@@ -68,7 +69,7 @@ const Login = () => {
                 <div className="login-header">
                     <div className="logo-placeholder">BM</div>
                     <h1>Doações BM</h1>
-                    <p>{isLogin ? 'Faça login para acessar o sistema' : 'Crie sua conta administrativa'}</p>
+                    <p>{isLogin ? 'Faça login para acessar o sistema' : 'Crie sua senha (somente e-mails autorizados)'}</p>
                 </div>
 
                 <form className="login-form" onSubmit={handleSubmit}>

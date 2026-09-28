@@ -112,11 +112,28 @@ export function AuthProvider({ children }) {
 
     const signUp = async (email, password) => {
         setError(null);
+
+        // 1. Verifica se o e-mail foi pré-autorizado pelo administrador
         const profile = await api.auth.profile(email);
         if (!profile || profile.error) {
             throw new Error('Apenas e-mails autorizados pelo Administrador podem se cadastrar.');
         }
-        await signIn(email, password);
+
+        // 2. Cria a conta no Supabase Auth
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+        });
+        if (signUpError) throw new Error(signUpError.message);
+
+        // 3. Vincula o user_id gerado ao perfil pré-cadastrado
+        const authUserId = signUpData?.user?.id;
+        if (authUserId && profile?.id) {
+            await supabase
+                .from('perfis_usuarios')
+                .update({ user_id: authUserId, status: 'Ativo' })
+                .eq('id', profile.id);
+        }
     };
 
     const signOut = async () => {
