@@ -108,14 +108,59 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
         }
     };
 
+    const formatDonorData = useCallback((d) => ({
+        codigo: String(d.codigo_doador).padStart(6, '0'), nome: d.nome || '', celular: maskPhone(d.celular || ''),
+        whatsapp: maskPhone(d.whatsapp || ''), fixo: maskPhone(d.fixo || ''), email: d.email || '',
+        contato: d.contato || '',
+        cep: maskCep(d.cep || ''), logradouro: d.logradouro || '', endereco: d.endereco || '',
+        complemento: d.complemento || '', bairro: d.bairro || '', cidade: d.cidade || '',
+        estado: d.estado || '', tipo: d.tipo_doador || '', regiao: d.regiao || '', dia_semana: d.dia_semana || '', mapa: d.mapa || '',
+        cod_tlmk: d.cod_tlmk || '', cod_matcob: d.cod_matcob || '', dataCadastro: d.data_cadastro || '', historico: d.historico || ''
+    }), []);
+
+    const loadDonorByCode = useCallback(async (code, silent = false) => {
+        if (!code) return false;
+        setLoading(true);
+        try {
+            const cleanCode = parseInt(code, 10);
+            if (isNaN(cleanCode)) {
+                if (!silent) showToast('Código de doador inválido.', 'error');
+                return false;
+            }
+            const [donorData, indexInfo] = await Promise.all([
+                api.doadores.get(cleanCode),
+                api.doadores.getIndexByCode(cleanCode).catch(() => ({ index: 0, total: 1 }))
+            ]);
+
+            if (donorData) {
+                setFormData(formatDonorData(donorData));
+                setCurrentIndex(indexInfo.index ?? 0);
+                setTotalRecords(indexInfo.total ?? 1);
+                setIsEditing(false);
+                setIsNew(false);
+                return true;
+            } else {
+                if (!silent) showToast('Doador não encontrado.', 'error');
+                return false;
+            }
+        } catch (e) {
+            console.error('Erro ao carregar doador por código:', e);
+            if (!silent) showToast('Doador não encontrado.', 'error');
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    }, [showToast, formatDonorData]);
+
     const fetchDonor = useCallback(async (index = 0, filter = null, silent = false) => {
+        if (filter?.type === 'code' && filter.value) {
+            return loadDonorByCode(filter.value, silent);
+        }
         setLoading(true);
         try {
             const params = { index, limit: 1 };
             if (filter) {
-                if (filter.type === 'code' && filter.value) {
-                    params.codigo = filter.value.padStart(6, '0').replace(/^0+/, '');
-                } else if (filter.type === 'name' && filter.value) {
+                if (filter.type === 'name' && filter.value) {
                     params.nome = filter.value;
                 } else if (filter.type === 'cep' && filter.value) {
                     params.cep = filter.value.replace(/\D/g, '');
@@ -139,15 +184,7 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
             }
             if (data?.length > 0) {
                 const d = data[0];
-                setFormData({
-                    codigo: String(d.codigo_doador).padStart(6, '0'), nome: d.nome || '', celular: maskPhone(d.celular || ''),
-                    whatsapp: maskPhone(d.whatsapp || ''), fixo: maskPhone(d.fixo || ''), email: d.email || '',
-                    contato: d.contato || '',
-                    cep: maskCep(d.cep || ''), logradouro: d.logradouro || '', endereco: d.endereco || '',
-                    complemento: d.complemento || '', bairro: d.bairro || '', cidade: d.cidade || '',
-                    estado: d.estado || '', tipo: d.tipo_doador || '', regiao: d.regiao || '', dia_semana: d.dia_semana || '', mapa: d.mapa || '',
-                    cod_tlmk: d.cod_tlmk || '', cod_matcob: d.cod_matcob || '', dataCadastro: d.data_cadastro || '', historico: d.historico || ''
-                });
+                setFormData(formatDonorData(d));
                 setCurrentIndex(idx); setTotalRecords(count || 0); setIsEditing(false); setIsNew(false);
             } else {
                 if (filter && !silent) showToast('Doador não encontrado.', 'error');
@@ -159,7 +196,7 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
         } finally {
             setLoading(false);
         }
-    }, [showToast]);
+    }, [showToast, formatDonorData, loadDonorByCode]);
 
     useEffect(() => {
         fetchDonor(0);
@@ -406,7 +443,9 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
 
             setIsEditing(false);
             setIsNew(false);
-            if (isNew) {
+            if (savedCode) {
+                await loadDonorByCode(savedCode, true);
+            } else if (isNew) {
                 await fetchDonor(totalRecords, null, true);
             } else {
                 await fetchDonor(currentIndex, null, true);
@@ -416,7 +455,7 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
     };
 
     const handleSearch = () => {
-        if (searchCode) fetchDonor(0, { type: 'code', value: searchCode });
+        if (searchCode) loadDonorByCode(searchCode);
         else if (searchName) fetchDonor(0, { type: 'name', value: searchName });
         else if (searchCep) fetchDonor(0, { type: 'cep', value: searchCep });
         else if (searchTel) fetchDonor(0, { type: 'tel', value: searchTel });
@@ -498,9 +537,9 @@ const DonorForm = ({ onNavigateToDoacoes, onNavigateToAlterarDoacoes }) => {
 
                 <button className="btn-action btn-primary" style={{ height: '38px' }} onClick={() => setIsEditing(true)} disabled={totalRecords === 0 || !canEdit}><Edit2 size={18} /> Alterar</button>
 
-                <button type="button" className="btn-action btn-secondary" style={{ height: '38px' }} onClick={() => { setIsEditing(false); setIsNew(false); fetchDonor(currentIndex >= 0 ? currentIndex : 0); }} disabled={!isEditing} title="Cancelar o cadastramento ou alteração"><X size={18} /> Cancelar</button>
+                <button type="button" className="btn-action btn-secondary" style={{ height: '38px' }} onClick={() => { setIsEditing(false); setIsNew(false); if (!isNew && formData.codigo) { loadDonorByCode(formData.codigo, true); } else { fetchDonor(currentIndex >= 0 ? currentIndex : 0); } }} disabled={!isEditing} title="Cancelar o cadastramento ou alteração"><X size={18} /> Cancelar</button>
 
-                <button className="btn-action btn-secondary" style={{ height: '38px' }} onClick={() => { fetchDonor(currentIndex); showToast('Dados sincronizados do banco!', 'info'); }}><RefreshCcw size={18} className={loading ? 'animate-spin' : ''} /> Sincronizar</button>
+                <button className="btn-action btn-secondary" style={{ height: '38px' }} onClick={() => { if (formData.codigo) { loadDonorByCode(formData.codigo, true); } else { fetchDonor(currentIndex >= 0 ? currentIndex : 0); } showToast('Dados sincronizados do banco!', 'info'); }}><RefreshCcw size={18} className={loading ? 'animate-spin' : ''} /> Sincronizar</button>
 
                 <button className="btn-action btn-secondary" style={{ height: '38px' }} onClick={() => { setFormData(initialFormState); setIsNew(false); setIsEditing(false); }}>Limpar</button>
             </div>

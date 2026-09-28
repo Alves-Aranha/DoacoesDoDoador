@@ -27,14 +27,38 @@ export const api = {
       return { data: data || [], count: count ?? (data || []).length };
     },
     get: async (codigo) => {
+      const clean = parseInt(codigo, 10);
+      if (isNaN(clean)) throw new Error('Código de doador inválido');
       const { data, error } = await supabase
         .from('doadores')
         .select('*')
-        .eq('codigo_doador', parseInt(codigo, 10))
+        .eq('codigo_doador', clean)
         .maybeSingle();
       if (error) throw error;
       if (!data) throw new Error('Doador não encontrado');
       return data;
+    },
+    getIndexByCode: async (codigo) => {
+      const cleanCode = parseInt(codigo, 10);
+      if (isNaN(cleanCode)) return { index: 0, total: 0 };
+
+      const [priorRes, totalRes] = await Promise.all([
+        supabase
+          .from('doadores')
+          .select('*', { count: 'exact', head: true })
+          .lt('codigo_doador', cleanCode),
+        supabase
+          .from('doadores')
+          .select('*', { count: 'exact', head: true })
+      ]);
+
+      if (priorRes.error) throw priorRes.error;
+      if (totalRes.error) throw totalRes.error;
+
+      return {
+        index: priorRes.count ?? 0,
+        total: totalRes.count ?? 0
+      };
     },
     getNextCode: async () => {
       const { data, error } = await supabase
