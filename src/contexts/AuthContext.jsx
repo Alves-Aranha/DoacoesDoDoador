@@ -113,26 +113,54 @@ export function AuthProvider({ children }) {
     const signUp = async (email, password) => {
         setError(null);
 
-        // 1. Verifica se o e-mail foi pré-autorizado pelo administrador
-        const profile = await api.auth.profile(email);
-        if (!profile || profile.error) {
-            throw new Error('Apenas e-mails autorizados pelo Administrador podem se cadastrar.');
-        }
-
-        // 2. Cria a conta no Supabase Auth
+        // 1. Cria a conta no Supabase Auth primeiro (sem precisar de anon SELECT)
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
         });
-        if (signUpError) throw new Error(signUpError.message);
 
-        // 3. Vincula o user_id gerado ao perfil pré-cadastrado
+        if (signUpError) {
+            // "User already registered" → já existe conta, orienta fazer login
+            if (signUpError.message?.toLowerCase().includes('already registered') ||
+                signUpError.message?.toLowerCase().includes('already been registered')) {
+                throw new Error('Este e-mail já possui uma conta. Use a opção de Login ou "Esqueci minha senha".');
+            }
+            throw new Error(signUpError.message);
+        }
+
         const authUserId = signUpData?.user?.id;
-        if (authUserId && profile?.id) {
-            await supabase
+
+        // 2. Faz login imediato para obter token autenticado e verificar o perfil
+        const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (!sessionError && sessionData?.user) {
+            // 3. Agora autenticado: verifica se o email está na lista de autorizados
+            const { data: perfil } = await supabase
                 .from('perfis_usuarios')
-                .update({ user_id: authUserId, status: 'Ativo' })
-                .eq('id', profile.id);
+                .select('*')
+                .eq('email', email.toLowerCase().trim())
+                .maybeSingle();
+
+            if (!perfil) {
+                // E-mail não autorizado: faz logout e remove conta criada
+                await supabase.auth.signOut();
+                // Não é possível deletar o usuário pelo cliente, mas ao menos desloga
+                throw new Error('Apenas e-mails autorizados pelo Administrador podem se cadastrar. Conta não ativada.');
+            }
+
+            // 4. Vincula o user_id e ativa o perfil
+            if (authUserId && perfil?.id && !perfil.user_id) {
+                await supabase
+                    .from('perfis_usuarios')
+                    .update({ user_id: authUserId, status: 'Ativo' })
+                    .eq('id', perfil.id);
+            }
+
+            // 5. Desloga — o usuário deve fazer login manualmente para confirmar o fluxo
+            await supabase.auth.signOut();
         }
     };
 
