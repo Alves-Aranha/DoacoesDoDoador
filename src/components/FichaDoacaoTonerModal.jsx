@@ -94,11 +94,11 @@ const FichaDoacaoTonerModal = ({ donation, onClose }) => {
             t1 += line(`               ENC. DOAÇÕES`,              `  ENC. TRANSPORTES`);
             t1 += `\n                            DOAÇÃO\n\n`;
             t1 += `${'-'.repeat(85)}\n`;
-            t1 += `QTDE          VOLUME          COD.DOAÇÃO          DESCRIÇÃO\n`;
+            t1 += `QTDE          VOLUME          CÓD. ITEM           DESCRIÇÃO\n`;
 
             // Itens da doação - Sempre ocupa 14 linhas para manter o alinhamento
             pageItems.forEach(it => {
-                t1 += `${pad(it.qtde, 14)}${pad(up(it.unidade || 'UN'), 16)}${pad(donCode, 20)}${up(it.item)}\n`;
+                t1 += `${pad(it.qtde, 14)}${pad(up(it.unidade || 'UN'), 16)}${pad(it.codigo_completo || it.codigo_item || '', 20)}${up(it.item)}\n`;
             });
 
             // Preenche com linhas vazias se tiver menos de 14 itens
@@ -115,10 +115,10 @@ const FichaDoacaoTonerModal = ({ donation, onClose }) => {
             t2 += `ENDEREÇO: ${enderecoCompleto}${numero ? ', ' + numero : ''}${compl ? ' - ' + compl : ''}\n`;
             t2 += `BAIRRO: ${pad(bairro, 16)} CIDADE: ${pad('SÃO PAULO', 15)} UF: ${pad('SP', 10)} CEP: ${cep}\n`;
             t2 += `${'-'.repeat(85)}\n`;
-            t2 += `QTDE          VOLUME          COD.DOAÇÃO          DESCRIÇÃO\n`;
+            t2 += `QTDE          VOLUME          CÓD. ITEM           DESCRIÇÃO\n`;
 
             pageItems.forEach(it => {
-                t2 += `${pad(it.qtde, 14)}${pad(up(it.unidade || 'UN'), 16)}${pad(donCode, 20)}${up(it.item)}\n`;
+                t2 += `${pad(it.qtde, 14)}${pad(up(it.unidade || 'UN'), 16)}${pad(it.codigo_completo || it.codigo_item || '', 20)}${up(it.item)}\n`;
             });
 
             // Preenche com linhas vazias se tiver menos de 14 itens no recibo também,

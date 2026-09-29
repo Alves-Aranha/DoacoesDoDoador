@@ -145,13 +145,13 @@ const RelFichaDoacoes = ({ donation, userLoggerName, onClose }) => {
             text += line(`            ${pad('ENC. DOAÇÕES', 40)}`, 'ENC. TRANSPORTES');
             text += blank();
             text += center('DADOS DA DOAÇÃO', 80) + '\r\n';
-            text += `  QTDE        VOLUME          COD.DOACAO        DESCRICAO\r\n`;
+            text += `  QTDE        VOLUME          CÓD. ITEM         DESCRICAO\r\n`;
             text += `${'.'.repeat(80)}\r\n`;
 
             chunk.forEach((it) => {
                 const qtde  = pad(it.qtde != null ? String(Math.round(it.qtde)) : '1', 6);
                 const vol   = pad(it.unidade || 'UN', 10);
-                const codIt = pad(donCode, 14);
+                const codIt = pad(it.codigo_completo || it.codigo_item || '', 14);
                 const desc  = up(it.item || '');
                 text += `   ${qtde}     ${vol}      ${codIt}    ${desc}\r\n`;
             });
@@ -181,13 +181,13 @@ const RelFichaDoacoes = ({ donation, userLoggerName, onClose }) => {
             text += `Bairro: ${pad(bairro, 25)} Cidade: ${pad(cidade, 20)} UF: ${pad(estado, 4)} CEP: ${cep}\r\n`;
             text += 'as mercadorias abaixo descriminadas:\r\n';
             text += blank();
-            text += `  QTDE        VOLUME          COD.DOACAO        DESCRICAO\r\n`;
+            text += `  QTDE        VOLUME          CÓD. ITEM         DESCRICAO\r\n`;
             text += `${'.'.repeat(80)}\r\n`;
 
             chunk.forEach((it) => {
                 const qtde  = pad(it.qtde != null ? String(Math.round(it.qtde)) : '1', 6);
                 const vol   = pad(it.unidade || 'UN', 10);
-                const cod   = pad(donCode, 14);
+                const cod   = pad(it.codigo_completo || it.codigo_item || '', 14);
                 const desc  = up(it.item || '');
                 text += `   ${qtde}     ${vol}      ${cod}    ${desc}\r\n`;
             });

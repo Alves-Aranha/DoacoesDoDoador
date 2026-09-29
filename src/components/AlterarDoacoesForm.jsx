@@ -89,7 +89,7 @@ const AddItemModal = ({ onAdd, onClose, categories }) => {
         if (itemNome && quantity > 0) {
             const catObj = categories.find(c => String(c.codigo_base) === String(selectedCategory));
             const foundItem = availableItems.find(x => x.nome === itemNome);
-            onAdd({ item: itemNome, qtde: quantity, categoria: catObj?.nome || 'Geral', unidade: unit, codigo_item: foundItem?.codigo_completo || '' });
+            onAdd({ item: itemNome, qtde: quantity, categoria: catObj?.nome || 'Geral', unidade: unit, codigo_item: foundItem?.codigo_completo || '', codigo_completo: foundItem?.codigo_completo || '' });
             onClose();
         }
     };
@@ -430,7 +430,8 @@ const AlterarDoacoesForm = ({ initialDonor, onBack }) => {
                     qtde: it.qtde,
                     categoria: it.categoria || 'Geral',
                     unidade: it.unidade || 'UN',
-                    codigo_item: it.codigo_item || ''
+                    codigo_item: it.codigo_item || it.codigo_completo || '',
+                    codigo_completo: it.codigo_completo || it.codigo_item || ''
                 }));
                 const { error: errorItens } = await supabase.from('itens_doacao').insert(itensToInsert);
                 if (errorItens) {

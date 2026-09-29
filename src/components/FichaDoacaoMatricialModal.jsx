@@ -116,7 +116,7 @@ const FichaDoacaoMatricialModal = ({ donation, userLoggerName, onClose, useToner
         items.forEach(it => {
             const qtde    = pad(it.qtde, 4);
             const unid    = pad(up(it.unidade || 'UN'), 4);
-            const codItem = pad(it.codigo_item || '', 8);
+            const codItem = pad(it.codigo_completo || it.codigo_item || '', 8);
             const vol     = pad('1/1', 8);
             const desc    = up(it.item);
             text += `${qtde} ${unid} ${codItem} ${vol} ${desc}\n`;
@@ -157,12 +157,12 @@ const FichaDoacaoMatricialModal = ({ donation, userLoggerName, onClose, useToner
         const uPad = pad(estado, 10);
         text += `BAIRRO: ${bPad} CIDADE: ${cPad} UF: ${uPad} CEP: ${cep}\r\n`;
         text += `${'-'.repeat(80)}\r\n`;
-        text += `QUANTIDADE  UNIDADE     CÓD.DOAÇÃO   DESCRIÇÃO\r\n`;
+        text += `QUANTIDADE  UNIDADE     CÓD.ITEM     DESCRIÇÃO\r\n`;
 
         (donation.itens || []).forEach(it => {
             const qtde = pad(it.qtde, 11);
             const unid = pad(up(it.unidade || 'UN'), 11);
-            const cod  = pad(donCode, 12);
+            const cod  = pad(it.codigo_completo || it.codigo_item || '', 12);
             const desc = up(it.item);
             text += `${qtde} ${unid} ${cod} ${desc}\r\n`;
         });
@@ -325,12 +325,12 @@ const FichaDoacaoMatricialModal = ({ donation, userLoggerName, onClose, useToner
                                 <div class="section-title">Itens da Doação</div>
                                 <table>
                                     <thead>
-                                        <tr><th>DOAÇÃO</th><th>UNIDADE</th><th>DESCRIÇÃO</th><th style="text-align:center;">QTDE</th></tr>
+                                        <tr><th>CÓD.ITEM</th><th>UNIDADE</th><th>DESCRIÇÃO</th><th style="text-align:center;">QTDE</th></tr>
                                     </thead>
                                     <tbody>
                                         ${(donation.itens || []).map(it => `
                                             <tr>
-                                                <td>${donCode}</td>
+                                                <td>${it.codigo_completo || it.codigo_item || ''}</td>
                                                 <td>${it.unidade || 'UN'}</td>
                                                 <td>${it.item}</td>
                                                 <td style="text-align:center;">${it.qtde}</td>

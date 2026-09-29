@@ -25,7 +25,14 @@ const ComunicacaoInternaTransportesModal = ({ donation, onClose }) => {
         if (donation) {
             setDonationCode(donation.codigo || donation.codigo_doacao || '');
             // Garante que foundData reflita a doação atual do Status Individual (evita ficar vazio)
-            setFoundData({ ...donation, _fromStatusIndividual: true });
+            // O campo RESPONSÁVEL ATUAL digitado tem prioridade sobre o valor da tabela doacoes
+            setFoundData(prev => ({
+                ...donation,
+                ...prev,
+                ...donation,
+                responsavel: (donation.responsavel || '').trim() || prev?.responsavel || donation?.responsavel || '',
+                _fromStatusIndividual: true
+            }));
         }
     }, [donation]);
 

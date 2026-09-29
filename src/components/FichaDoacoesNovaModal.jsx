@@ -210,14 +210,14 @@ const DoacaoFichaMatricial = ({ donation, userLoggerName, onClose }) => {
             text += center('DADOS DA DOACAO', 80) + '\r\n';
 
             // Linha 17: Cabeçalho da tabela
-            text += `${pad('QTDE', 8)} ${pad('VOLUME', 14)} ${pad('COD.DOACAO', 14)} DESCRICAO\r\n`;
+            text += `${pad('QTDE', 8)} ${pad('VOLUME', 14)} ${pad('CÓD. ITEM', 14)} DESCRICAO\r\n`;
             text += `${'-'.repeat(80)}\r\n`;
 
             // Itens
             chunk.forEach((it) => {
                 const qtde  = pad(it.qtde != null ? String(Math.round(it.qtde)) : '', 7);
                 const vol   = pad(it.unidade || 'UN', 14);
-                const codIt = pad(donCode, 14);
+                const codIt = pad(it.codigo_completo || it.codigo_item || '', 14);
                 const desc  = up(it.item || '');
                 text += `${qtde}  ${vol} ${codIt} ${desc}\r\n`;
             });
@@ -263,13 +263,13 @@ const DoacaoFichaMatricial = ({ donation, userLoggerName, onClose }) => {
             text += 'as mercadorias abaixo descriminadas:\r\n\r\n';
 
             // Tabela do recibo
-            text += `${pad('QTDE', 8)} ${pad('VOLUME', 14)} ${pad('COD.DOACAO', 14)} DESCRICAO\r\n`;
+            text += `${pad('QTDE', 8)} ${pad('VOLUME', 14)} ${pad('CÓD. ITEM', 14)} DESCRICAO\r\n`;
             text += `${'-'.repeat(80)}\r\n`;
 
             chunk.forEach((it) => {
                 const qtde  = pad(it.qtde != null ? String(Math.round(it.qtde)) : '', 7);
                 const vol   = pad(it.unidade || 'UN', 14);
-                const cod   = pad(donCode, 14);
+                const cod   = pad(it.codigo_completo || it.codigo_item || '', 14);
                 const desc  = up(it.item || '');
                 text += `${qtde}  ${vol} ${cod} ${desc}\r\n`;
             });
